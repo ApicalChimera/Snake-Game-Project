@@ -52,3 +52,44 @@ int main()
         cout << "need 2 shit";
     }
 }
+
+void input() // if statements will be needed for logic so the snake cant go backwards into its own body, we can also set wsad to a second player if we want multiplayer
+{
+    if (_kbhit())
+    {
+        char key = _getch();
+        switch (key)
+        {
+        case 'w':
+        case 'W':
+        case 72:
+            //if ()
+            //{
+            //}
+            break;
+        case 's':
+        case 'S':
+        case 80: 
+            //if ()
+            //{
+            //}
+            break;
+        case 'a':
+        case 'A':
+        case 75: 
+            //if ()
+            //{
+            //}
+            break;
+        case 'd':
+        case 'D':
+        case 77: 
+            //if ()
+            //{
+            //}
+            break;
+        default:
+            break;
+        }
+    }
+}
