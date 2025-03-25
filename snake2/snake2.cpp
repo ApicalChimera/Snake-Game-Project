@@ -56,7 +56,7 @@ int main()
 void input() // if statements will be needed for logic so the snake cant go backwards into its own body, we can also set wsad to a second player if we want multiplayer
 {
     if (_kbhit())
-    {
+    { 
         char key = _getch();
         switch (key)
         {
