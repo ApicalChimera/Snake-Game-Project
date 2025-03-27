@@ -4,13 +4,16 @@
 * Due Date: April 3rd, 2025
 */
 #include<iostream>
+#include<random>
+#include <ctime>
+#include <cmath>
 #include<windows.h>
-#include<conio.h>
+#include<conio.h> // for keyboard inputs
 using namespace std;
 
 bool gameover;
 
-class SnakeBody {
+class SnakeBody { // body of the snake (coordinates, movement, update position, and get the previous position)
 private:
     int x, y;
     int prevX, prevY;
