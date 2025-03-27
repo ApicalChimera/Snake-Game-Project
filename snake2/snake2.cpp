@@ -2,7 +2,6 @@
 * Snake Game Project
 * 
 * 
-* sean
 * 
 */
 #include<iostream>
