@@ -1,7 +1,7 @@
 /*
 * Snake Game Project
 * By: Eleek Zhang, Daniel Chen, Sean Lin, & Brian Dietz
-* Due Date: April 3rd, 2025
+* Due Date: April 3rd, 2029
 */
 #include<iostream>
 #include<windows.h>
