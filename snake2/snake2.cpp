@@ -2,8 +2,8 @@
 * Snake Game Project
 <<<<<<< HEAD
 * 
-* 
-* 
+* tails
+*
 =======
 * By: Eleek Zhang, Daniel Chen, Sean Lin, & Brian Dietz
 * Due Date: April 3rd, 2025
