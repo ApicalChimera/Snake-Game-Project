@@ -249,13 +249,19 @@ private:
     SnakeBody body[100];
     int ntail;
     eDirection direction;
+    int snakeScore;
 
 public:
     Snake(int startX, int startY) {
         direction = STOP;
         ntail = 0;
         body[0] = SnakeBody(startX, startY);
+        snakeScore = 0;
     }
+
+    void setScore(int newScore) { snakeScore = newScore; }
+    int getScore() const { return snakeScore; }
+    void addScore(int points) { snakeScore += points; }
 
     void move() {
         for (int i = ntail; i > 0; i--) {
@@ -324,6 +330,12 @@ public:
 Snake* snake = nullptr;
 Food* foods[MAX_MULTIPLE_FOODS] = { nullptr };
 int activeFoodCount = 0;
+Snake* snake2 = nullptr;
+
+enum eControlMode { PLAYER1 = 0, PLAYER2 };
+eDirection dir2;
+eControlMode activePlayer;
+bool twoPlayerMode = false;
 
 // All available food types to choose from when generating random food
 Food* foodTemplates[5] = { nullptr };
@@ -334,6 +346,7 @@ void setup() {
     gameover = false;
     score = 0;
     dir = STOP;
+    dir2 = STOP;
     scoreMultiplier = 1;
     scoreMultiplierActive = false;
     currentFoodCount = MIN_FOODS;
@@ -343,7 +356,20 @@ void setup() {
     cout << "Select game mode:" << endl;
     cout << "1. Classic mode (regular food only)" << endl;
     cout << "2. Multiple food types mode" << endl;
+    cout << "3. Two Player mode" << endl;
     cin >> gameMode;
+
+    twoPlayerMode = (gameMode == 3);
+
+    if (twoPlayerMode) {
+        cout << "Select Two Player type:" << endl;
+        cout << "1. Classic (regular food only)" << endl;
+        cout << "2. Multiple food types (excluding score multiplier)" << endl;
+        int twoPlayerType;
+        cin >> twoPlayerType;
+
+        gameMode = (twoPlayerType == 1) ? 1 : 2;
+    }
 
     cout << "Select difficulty:" << endl;
     cout << "1. Hard (faster)" << endl;
@@ -353,7 +379,13 @@ void setup() {
     baseGameSpeed = (difficultyMode == 1) ? 60 : 200;
     currentGameSpeed = baseGameSpeed;
 
-    snake = new Snake(width / 2, height / 2);
+    snake = new Snake(width / 3, height / 2);
+
+    if (twoPlayerMode) {
+        snake2 = new Snake(2 * width / 3, height / 2);
+        snake2->setScore(0); 
+        activePlayer = PLAYER1; 
+    }
 
     srand(static_cast<unsigned>(time(0)));
 
@@ -362,7 +394,9 @@ void setup() {
     foodTemplates[1] = new SpeedUpFood();
     foodTemplates[2] = new SlowDownFood();
     foodTemplates[3] = new ShrinkFood();
-    foodTemplates[4] = new ScoreMultiplierFood();
+    if (!twoPlayerMode || gameMode == 1) {
+        foodTemplates[4] = new ScoreMultiplierFood();
+    }
 
     // Initialize minimum number of food items
     activeFoodCount = MIN_FOODS;
@@ -374,7 +408,8 @@ void setup() {
     }
     else {
         for (int i = 0; i < MIN_FOODS; i++) {
-            int randomFoodType = rand() % 5;
+            int maxFoodTypes = (twoPlayerMode) ? 4 : 5;  // Exclude multiplier food in two player mode
+            int randomFoodType = rand() % maxFoodTypes;
             foods[i] = foodTemplates[randomFoodType]->clone();
 
             if (randomFoodType == 3) {
@@ -391,7 +426,13 @@ void setup() {
     // Clear screen before game start
     system("cls");
 
-    cout << "Use WASD or arrow keys to move the snake." << endl;
+    if (twoPlayerMode) {
+        cout << "Player 1: Use WASD keys to move" << endl;
+        cout << "Player 2: Use Arrow keys to move" << endl;
+    }
+    else {
+        cout << "Use WASD or arrow keys to move the snake." << endl;
+    }
     cout << "Press X to quit the game." << endl;
 
     if (gameMode == 2) {
@@ -400,7 +441,9 @@ void setup() {
         cout << "<> - Removes part of the snake and reduces score by 20" << endl;
         cout << "{} - Increases speed by 1.5x for 3 seconds" << endl;
         cout << "[] - Reduces speed to 0.5x for 3 seconds" << endl;
-        cout << "&& - Doubles score points for 3 seconds" << endl;
+        if (!twoPlayerMode) {
+            cout << "&& - Doubles score points for 3 seconds" << endl;
+        }
         cout << "\nFood will gradually spawn over time (every 7 seconds)" << endl;
     }
     else {
@@ -415,45 +458,110 @@ void setup() {
 void input() {
     if (_kbhit()) {
         char key = _getch();
-        switch (key) {
-        case 'w':
-        case 'W':
-        case 72: // ASCII code for up arrow key
-            if (dir != DOWN) {
-                dir = UP;
-                snake->setDirection(UP);
+
+        if (twoPlayerMode) {
+            // Player 1 controls (WASD)
+            switch (key) {
+            case 'w':
+            case 'W':
+                if (snake->getDirection() != DOWN) {
+                    dir = UP;
+                    snake->setDirection(UP);
+                }
+                break;
+            case 's':
+            case 'S':
+                if (snake->getDirection() != UP) {
+                    dir = DOWN;
+                    snake->setDirection(DOWN);
+                }
+                break;
+            case 'a':
+            case 'A':
+                if (snake->getDirection() != RIGHT) {
+                    dir = LEFT;
+                    snake->setDirection(LEFT);
+                }
+                break;
+            case 'd':
+            case 'D':
+                if (snake->getDirection() != LEFT) {
+                    dir = RIGHT;
+                    snake->setDirection(RIGHT);
+                }
+                break;
+
+                // Player 2 controls (Arrow keys)
+            case 72: // ASCII code for up arrow key
+                if (snake2->getDirection() != DOWN) {
+                    dir2 = UP;
+                    snake2->setDirection(UP);
+                }
+                break;
+            case 80: // ASCII code for down arrow key
+                if (snake2->getDirection() != UP) {
+                    dir2 = DOWN;
+                    snake2->setDirection(DOWN);
+                }
+                break;
+            case 75: // ASCII code for left arrow key
+                if (snake2->getDirection() != RIGHT) {
+                    dir2 = LEFT;
+                    snake2->setDirection(LEFT);
+                }
+                break;
+            case 77: // ASCII code for right arrow key
+                if (snake2->getDirection() != LEFT) {
+                    dir2 = RIGHT;
+                    snake2->setDirection(RIGHT);
+                }
+                break;
+            case 'x':
+            case 'X':
+                gameover = true;
+                break;
             }
-            break;
-        case 's':
-        case 'S':
-        case 80: // ASCII code for down arrow key
-            if (dir != UP) {
-                dir = DOWN;
-                snake->setDirection(DOWN);
+        }
+        else {
+            // Original single player controls
+            switch (key) {
+            case 'w':
+            case 'W':
+            case 72: // ASCII code for up arrow key
+                if (dir != DOWN) {
+                    dir = UP;
+                    snake->setDirection(UP);
+                }
+                break;
+            case 's':
+            case 'S':
+            case 80: // ASCII code for down arrow key
+                if (dir != UP) {
+                    dir = DOWN;
+                    snake->setDirection(DOWN);
+                }
+                break;
+            case 'a':
+            case 'A':
+            case 75: // ASCII code for left arrow key
+                if (dir != RIGHT) {
+                    dir = LEFT;
+                    snake->setDirection(LEFT);
+                }
+                break;
+            case 'd':
+            case 'D':
+            case 77: // ASCII code for right arrow key
+                if (dir != LEFT) {
+                    dir = RIGHT;
+                    snake->setDirection(RIGHT);
+                }
+                break;
+            case 'x':
+            case 'X':
+                gameover = true;
+                break;
             }
-            break;
-        case 'a':
-        case 'A':
-        case 75: // ASCII code for left arrow key
-            if (dir != RIGHT) {
-                dir = LEFT;
-                snake->setDirection(LEFT);
-            }
-            break;
-        case 'd':
-        case 'D':
-        case 77: // ASCII code for right arrow key
-            if (dir != LEFT) {
-                dir = RIGHT;
-                snake->setDirection(RIGHT);
-            }
-            break;
-        case 'x':
-        case 'X':
-            gameover = true;
-            break;
-        default:
-            break;
         }
     }
 }
@@ -466,6 +574,18 @@ bool isPositionOnSnake(int x, int y) {
     for (int i = 1; i <= snake->getNTail(); i++) {
         if (x == snake->getBodyPart(i).getX() && y == snake->getBodyPart(i).getY()) {
             return true;
+        }
+    }
+
+    if (twoPlayerMode) {
+        if (x == snake2->getHeadX() && y == snake2->getHeadY()) {
+            return true;
+        }
+
+        for (int i = 1; i <= snake2->getNTail(); i++) {
+            if (x == snake2->getBodyPart(i).getX() && y == snake2->getBodyPart(i).getY()) {
+                return true;
+            }
         }
     }
 
@@ -582,7 +702,7 @@ void updateEffects() {
 
     if (elapsedMs >= FOOD_GENERATION_INTERVAL) {
         if (activeFoodCount < MAX_MULTIPLE_FOODS) {
-            generateNewFood(); // Now both game modes will generate food
+            generateNewFood(); 
         }
         lastFoodGenerationTime = currentTime;
     }
@@ -595,13 +715,21 @@ void logic() {
         snake->move();
     }
 
+    if (twoPlayerMode && dir2 != STOP) {
+        snake2->move();
+    }
+
     int headX = snake->getHeadX();
     int headY = snake->getHeadY();
+    int head2X = (twoPlayerMode) ? snake2->getHeadX() : -1;
+    int head2Y = (twoPlayerMode) ? snake2->getHeadY() : -1;
 
     for (int i = 0; i < activeFoodCount; i++) {
         if (foods[i] != nullptr && headX == foods[i]->getX() && headY == foods[i]->getY()) {
             if (dynamic_cast<ShrinkFood*>(foods[i]) == nullptr) {
-                score += 10 * scoreMultiplier;
+                int addScore = 10 * scoreMultiplier;
+                snake->addScore(addScore);
+                score = snake->getScore(); 
             }
 
             bool wasShrinkFood = dynamic_cast<ShrinkFood*>(foods[i]) != nullptr;
@@ -611,6 +739,7 @@ void logic() {
                 speedEffectTimer, score, scoreMultiplier,
                 scoreMultiplierActive, scoreMultiplierTimer);
             snake->setNTail(tailSize);
+            snake->setScore(score); 
 
             if (wasShrinkFood) {
                 shrinkFoodCount--;
@@ -621,8 +750,78 @@ void logic() {
         }
     }
 
+    if (twoPlayerMode) {
+        for (int i = 0; i < activeFoodCount; i++) {
+            if (foods[i] != nullptr && head2X == foods[i]->getX() && head2Y == foods[i]->getY()) {
+                if (dynamic_cast<ShrinkFood*>(foods[i]) == nullptr) {
+                    int addScore = 10 * scoreMultiplier;
+                    snake2->addScore(addScore);
+                }
+
+                bool wasShrinkFood = dynamic_cast<ShrinkFood*>(foods[i]) != nullptr;
+
+                int tailSize = snake2->getNTail();
+                int player2Score = snake2->getScore();
+                foods[i]->applyEffect(baseGameSpeed, currentGameSpeed, tailSize, speedEffectActive,
+                    speedEffectTimer, player2Score, scoreMultiplier,
+                    scoreMultiplierActive, scoreMultiplierTimer);
+                snake2->setNTail(tailSize);
+                snake2->setScore(player2Score);
+
+                if (wasShrinkFood) {
+                    shrinkFoodCount--;
+                }
+
+                respawnFood(i);
+                break;
+            }
+        }
+    }
+
     if (snake->checkCollision()) {
+        if (twoPlayerMode) {
+            gameover = true;
+            activePlayer = PLAYER2; 
+        }
+        else {
+            gameover = true;
+        }
+    }
+
+    if (twoPlayerMode && snake2->checkCollision()) {
         gameover = true;
+        activePlayer = PLAYER1;
+    }
+
+    if (twoPlayerMode) {
+        if (headX == head2X && headY == head2Y) {
+            gameover = true;
+            if (snake->getScore() > snake2->getScore()) {
+                activePlayer = PLAYER1; 
+            }
+            else if (snake2->getScore() > snake->getScore()) {
+                activePlayer = PLAYER2; 
+            }
+            else {
+                activePlayer = PLAYER1; 
+            }
+        }
+
+        for (int i = 1; i <= snake2->getNTail(); i++) {
+            if (headX == snake2->getBodyPart(i).getX() && headY == snake2->getBodyPart(i).getY()) {
+                gameover = true;
+                activePlayer = PLAYER2;
+                break;
+            }
+        }
+
+        for (int i = 1; i <= snake->getNTail(); i++) {
+            if (head2X == snake->getBodyPart(i).getX() && head2Y == snake->getBodyPart(i).getY()) {
+                gameover = true;
+                activePlayer = PLAYER1; 
+                break;
+            }
+        }
     }
 }
 
@@ -635,6 +834,10 @@ void draw() {
 
     char headChar = 219; // ASCII code for solid block █
     char tailChar = 176; // ASCII code for light shade ░
+
+    // Character for player 2's snake (inverted)
+    char head2Char = 178; // ASCII code for medium shade ▓
+    char tail2Char = 177; // ASCII code for dark shade ▒
 
     char topLeftChar = 201;     // ╔
     char topRightChar = 187;    // ╗
@@ -651,9 +854,12 @@ void draw() {
     for (int i = 0; i < height; i++) {
         cout << verticalChar;
         for (int j = 0; j < width; j++) {
-            // Snake head
+            // Snake head (player 1)
             if (i == snake->getHeadY() && j == snake->getHeadX())
                 cout << headChar << headChar;
+            // Snake head (player 2)
+            else if (twoPlayerMode && i == snake2->getHeadY() && j == snake2->getHeadX())
+                cout << head2Char << head2Char;
             else {
                 // Check for food
                 bool foodFound = false;
@@ -666,7 +872,7 @@ void draw() {
                 }
 
                 if (!foodFound) {
-                    // Check for tail segments
+                    // Check for Player 1's tail segments
                     bool tailFound = false;
                     for (int k = 1; k <= snake->getNTail(); k++) {
                         const SnakeBody& body = snake->getBodyPart(k);
@@ -674,6 +880,18 @@ void draw() {
                             cout << tailChar << tailChar;
                             tailFound = true;
                             break;
+                        }
+                    }
+
+                    // Check for Player 2's tail segments
+                    if (!tailFound && twoPlayerMode) {
+                        for (int k = 1; k <= snake2->getNTail(); k++) {
+                            const SnakeBody& body = snake2->getBodyPart(k);
+                            if (i == body.getY() && j == body.getX()) {
+                                cout << tail2Char << tail2Char;
+                                tailFound = true;
+                                break;
+                            }
                         }
                     }
 
@@ -691,16 +909,17 @@ void draw() {
         cout << horizontalChar << horizontalChar;
     cout << bottomRightChar << endl;
 
-    cout << "Score: " << score;
-
-    // Only show the multiplier when it's active
-    if (scoreMultiplierActive) {
-        cout << " (x" << scoreMultiplier << " multiplier active)";
+    if (twoPlayerMode) {
+        cout << "Player 1 Score: " << snake->getScore();
+        cout << " | Player 2 Score: " << snake2->getScore();
     }
-    else if (!scoreMultiplierActive)
-    {
-        cout << "                                                  ";
+    else {
+        cout << "Score: " << score;
+    }
 
+    // Only show the multiplier when it's active and not in two player mode
+    if (!twoPlayerMode && scoreMultiplierActive) {
+        cout << " (x" << scoreMultiplier << " multiplier active)";
     }
     cout << endl;
 
@@ -709,16 +928,16 @@ void draw() {
         cout << "() Add segment | ";
         cout << "<> -2 segments & -20 score | ";
         cout << "{} Speed up 1.5x | ";
-        cout << "[] Slow down 0.5x | ";
-        cout << "&& 2x Score multiplier" << endl;
+        cout << "[] Slow down 0.5x";
+        if (!twoPlayerMode) {
+            cout << " | && 2x Score multiplier";
+        }
+        cout << endl;
 
         // Only show speed percentage in mode 2
         int speedPercent = (baseGameSpeed == 0) ? 0 : (baseGameSpeed * 100 / currentGameSpeed);
         cout << "Speed: " << speedPercent << "%" << endl;
     }
-
-    // Display shrink food counter for debugging if needed
-    // cout << "Shrink foods: " << shrinkFoodCount << "/" << MAX_SHRINK_FOOD << endl;
 
     if (activeFoodCount < MAX_MULTIPLE_FOODS) {
         int remainingMs = FOOD_GENERATION_INTERVAL -
@@ -731,7 +950,7 @@ void draw() {
         cout << "Speed effect: " << remainingMs / 1000 << "." << (remainingMs % 1000) / 100 << " seconds" << endl;
     }
 
-    if (scoreMultiplierActive) {
+    if (!twoPlayerMode && scoreMultiplierActive) {
         int remainingMs = scoreMultiplierTimer.getRemainingTime();
         cout << "Score multiplier: " << remainingMs / 1000 << "." << (remainingMs % 1000) / 100 << " seconds" << endl;
     }
@@ -747,7 +966,7 @@ int main() {
         logic();
 
         // Adjust speed based on direction to compensate for aspect ratio
-        if (dir == LEFT || dir == RIGHT)
+        if (dir == LEFT || dir == RIGHT || (twoPlayerMode && (dir2 == LEFT || dir2 == RIGHT)))
             Sleep(currentGameSpeed); // Slower for horizontal movement
         else
             Sleep(currentGameSpeed / 2); // Faster for vertical movement
@@ -755,6 +974,10 @@ int main() {
 
     // Clean up
     delete snake;
+
+    if (twoPlayerMode) {
+        delete snake2;
+    }
 
     for (int i = 0; i < activeFoodCount; i++) {
         delete foods[i];
@@ -765,7 +988,18 @@ int main() {
     }
 
     cout << endl << endl << endl << "GAME OVER" << endl;
-    cout << "Final Score: " << score << endl;
+
+    if (twoPlayerMode) {
+        if (activePlayer == PLAYER1) {
+            cout << "Player 1 wins with a score of " << snake->getScore() << "!" << endl;
+        }
+        else {
+            cout << "Player 2 wins with a score of " << snake2->getScore() << "!" << endl;
+        }
+    }
+    else {
+        cout << "Final Score: " << score << endl;
+    }
 
     PlaySound(NULL, 0, 0);
     return 0;
