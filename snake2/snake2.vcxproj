@@ -129,6 +129,9 @@
   <ItemGroup>
     <ClCompile Include="snake2.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <Media Include="..\..\..\..\..\Downloads\gameMusic.wav" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

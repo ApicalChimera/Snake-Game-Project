@@ -15,6 +15,9 @@
 #include <cmath>
 #include<windows.h>
 #include<conio.h> // for keyboard inputs
+#include <mmsystem.h>
+#pragma comment(lib, "winmm.lib")
+
 using namespace std;
 
 const int height = 20;
@@ -323,6 +326,7 @@ void draw() {
 
 int main() {
     setup();
+    PlaySound(TEXT("gameMusic.wav"), NULL, SND_FILENAME | SND_LOOP | SND_ASYNC);
 
     while (!gameover) {
         draw();
@@ -335,6 +339,7 @@ int main() {
         else
             Sleep(gameSpeed / 2); //Faster for vertical movement
     }
+    PlaySound(NULL, 0, 0);  // Stop sound when game ends
 
     delete snake;
     delete food;
