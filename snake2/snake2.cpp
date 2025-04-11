@@ -20,28 +20,28 @@ using namespace std;
 const int height = 20;
 const int width = 30;
 
-const int MAX_MULTIPLE_FOODS = 12;
-const int MIN_FOODS = 2;
-const int EFFECT_DURATION = 3000;
+const int MAX_MULTIPLE_FOODS = 12; // max number of food items on screen
+const int MIN_FOODS = 2; // minimum number of food items
+const int EFFECT_DURATION = 3000; // duration of power-up effects in ms
 bool gameover; // game over flag
 int score; // counter variable for player score
 int baseGameSpeed; // base speed of the game
-int currentGameSpeed;
-int difficultyMode;
-int gameMode;
+int currentGameSpeed; // current game speed
+int difficultyMode; // difficulty setting
+int gameMode; // selected game mode
 
-bool speedEffectActive = false;
-bool scoreMultiplierActive = false;
-int scoreMultiplier = 1;
-int foodGenerationTimer = 0;
-const int FOOD_GENERATION_INTERVAL = 7000;
-int currentFoodCount = 2;
-clock_t lastFoodGenerationTime;
-int shrinkFoodCount = 0;
-const int MAX_SHRINK_FOOD = 2;
+bool speedEffectActive = false; // flag for speed effect
+bool scoreMultiplierActive = false; // flag for score multiplier effect
+int scoreMultiplier = 1; // multiplier for score during effect
+int foodGenerationTimer = 0; // timer for controlling food spawn
+const int FOOD_GENERATION_INTERVAL = 7000; // interval to generate new food
+int currentFoodCount = 2; // current number of food on screen
+clock_t lastFoodGenerationTime; // time when last food was generated
+int shrinkFoodCount = 0; // count of shrink food items on screen
+const int MAX_SHRINK_FOOD = 2; // max shrink food allowed
 
-enum eDirection { STOP = 0, UP, DOWN, LEFT, RIGHT };
-eDirection dir;
+enum eDirection { STOP = 0, UP, DOWN, LEFT, RIGHT }; // directions for snake movement
+eDirection dir; // current direction
 
 // Snake body class to store the position of each segment (differs from the snake head)
 class SnakeBody {
@@ -50,7 +50,7 @@ private:
     int prevX, prevY; // previous position of the snake body in x and y coordinates
 
 public:
-    SnakeBody(int x = 0, int y = 0) : x(x), y(y), prevX(x), prevY(y) {}
+    SnakeBody(int x = 0, int y = 0) : x(x), y(y), prevX(x), prevY(y) {} // constructor with default values
 
     void updatePosition(int newX, int newY) { // update the position of the snake body
         prevX = x;
@@ -59,28 +59,29 @@ public:
         y = newY;
     }
 
-    int getX() const { return x; }
-    int getY() const { return y; }
-    int getPrevX() const { return prevX; }
-    int getPrevY() const { return prevY; }
+    int getX() const { return x; } // get current x position
+    int getY() const { return y; } // get current y position
+    int getPrevX() const { return prevX; } // get previous x position
+    int getPrevY() const { return prevY; } // get previous y position
 };
 
+// Timer class for handling power-up durations
 class EffectTimer {
 private:
-    clock_t startTime;
-    bool isActive;
-    int duration;
+    clock_t startTime; // time when effect started
+    bool isActive; // whether effect is active
+    int duration; // effect duration in milliseconds
 
 public:
-    EffectTimer() : startTime(0), isActive(false), duration(0) {}
+    EffectTimer() : startTime(0), isActive(false), duration(0) {} // constructor
 
-    void start(int durationMs) {
+    void start(int durationMs) { // start the effect timer
         startTime = clock();
         duration = durationMs;
         isActive = true;
     }
 
-    bool isExpired() {
+    bool isExpired() { // check if the effect time has expired
         if (!isActive) return true;
 
         clock_t currentTime = clock();
@@ -93,7 +94,7 @@ public:
         return false;
     }
 
-    int getRemainingTime() {
+    int getRemainingTime() { // get time left for the effect
         if (!isActive) return 0;
 
         clock_t currentTime = clock();
@@ -103,48 +104,49 @@ public:
         return (remaining > 0) ? remaining : 0;
     }
 
-    bool isRunning() {
+    bool isRunning() { // check if the timer is running
         return isActive;
     }
 
-    void reset() {
+    void reset() { // stop the timer
         isActive = false;
     }
 };
 
-EffectTimer speedEffectTimer;
-EffectTimer scoreMultiplierTimer;
+EffectTimer speedEffectTimer; // timer for speed effect duration
+EffectTimer scoreMultiplierTimer; // timer for score multiplier duration
 
 // Food class to store the position of the food in x and y coordinates with respect to the game board
-class Food { 
+class Food {
 protected:
-    int x, y;
-    char leftSymbol, rightSymbol;
+    int x, y; // position of the food
+    char leftSymbol, rightSymbol; // characters to represent the food visually
 
 public:
     Food(int x = 0, int y = 0) : x(x), y(y), leftSymbol('('), rightSymbol(')') {}
     virtual ~Food() {}
 
-    void getFoodPosition(int& foodX, int& foodY) const {
+    void getFoodPosition(int& foodX, int& foodY) const { // returns food coordinates
         foodX = x;
         foodY = y;
     }
 
-    virtual void respawn(int maxWidth, int maxHeight) {
+    virtual void respawn(int maxWidth, int maxHeight) { // randomize food position
         x = rand() % maxWidth;
         y = rand() % maxHeight;
     }
 
-    int getX() const { return x; }
-    int getY() const { return y; }
-    void setPosition(int newX, int newY) {
+    int getX() const { return x; } // get x coordinate
+    int getY() const { return y; } // get y coordinate
+    void setPosition(int newX, int newY) { // set new coordinates
         x = newX;
         y = newY;
     }
 
-    char getLeftSymbol() const { return leftSymbol; }
-    char getRightSymbol() const { return rightSymbol; }
+    char getLeftSymbol() const { return leftSymbol; } // left visual symbol
+    char getRightSymbol() const { return rightSymbol; } // right visual symbol
 
+    // apply specific food effect (pure virtual function)
     virtual void applyEffect(int& baseSpeed, int& currentSpeed, int& tailSize, bool& speedEffectActive,
         EffectTimer& speedTimer, int& score, int& scoreMultiplier,
         bool& scoreMultiplierActive, EffectTimer& scoreMultiplierTimer) = 0;
@@ -163,7 +165,7 @@ public:
     void applyEffect(int& baseSpeed, int& currentSpeed, int& tailSize, bool& speedEffectActive,
         EffectTimer& speedTimer, int& score, int& scoreMultiplier,
         bool& scoreMultiplierActive, EffectTimer& scoreMultiplierTimer) override {
-        tailSize++;
+        tailSize++; // grow snake by 1
     }
 
     Food* clone() const override {
@@ -181,10 +183,10 @@ public:
     void applyEffect(int& baseSpeed, int& currentSpeed, int& tailSize, bool& speedEffectActive,
         EffectTimer& speedTimer, int& score, int& scoreMultiplier,
         bool& scoreMultiplierActive, EffectTimer& scoreMultiplierTimer) override {
-        currentSpeed = static_cast<int>(baseSpeed * 0.5);
+        currentSpeed = static_cast<int>(baseSpeed * 0.5); // increase speed
         speedEffectActive = true;
         speedTimer.start(EFFECT_DURATION);
-        tailSize++;
+        tailSize++; // grow snake by 1
     }
 
     Food* clone() const override {
@@ -202,10 +204,10 @@ public:
     void applyEffect(int& baseSpeed, int& currentSpeed, int& tailSize, bool& speedEffectActive,
         EffectTimer& speedTimer, int& score, int& scoreMultiplier,
         bool& scoreMultiplierActive, EffectTimer& scoreMultiplierTimer) override {
-        currentSpeed = static_cast<int>(baseSpeed * 1.5);
+        currentSpeed = static_cast<int>(baseSpeed * 1.5); // slow down speed
         speedEffectActive = true;
         speedTimer.start(EFFECT_DURATION);
-        tailSize++;
+        tailSize++; // grow snake by 1
     }
 
     Food* clone() const override {
@@ -223,8 +225,8 @@ public:
     void applyEffect(int& baseSpeed, int& currentSpeed, int& tailSize, bool& speedEffectActive,
         EffectTimer& speedTimer, int& score, int& scoreMultiplier,
         bool& scoreMultiplierActive, EffectTimer& scoreMultiplierTimer) override {
-        tailSize = max(0, tailSize - 2);
-        score = max(0, score - 20);
+        tailSize = max(0, tailSize - 2); // shrink snake
+        score = max(0, score - 20); // decrease score
     }
 
     Food* clone() const override {
@@ -242,39 +244,38 @@ public:
     void applyEffect(int& baseSpeed, int& currentSpeed, int& tailSize, bool& speedEffectActive,
         EffectTimer& speedTimer, int& score, int& scoreMultiplier,
         bool& scoreMultiplierActive, EffectTimer& scoreMultiplierTimer) override {
-        scoreMultiplier = 2;
+        scoreMultiplier = 2; // double the score
         scoreMultiplierActive = true;
         scoreMultiplierTimer.start(EFFECT_DURATION);
-        tailSize++;
+        tailSize++; // grow snake by 1
     }
 
     Food* clone() const override {
         return new ScoreMultiplierFood(*this);
     }
 };
-
 // Snake class to store the position of the snake in x and y coordinates with respect to the game board
 // This is where the snake moves
 class Snake {
 private:
-    SnakeBody body[100];
-    int ntail;
-    eDirection direction;
-    int snakeScore;
+    SnakeBody body[100]; // stores snake segments
+    int ntail; // number of tail segments
+    eDirection direction; // current movement direction
+    int snakeScore; // player's score
 
 public:
     Snake(int startX, int startY) {
         direction = STOP;
         ntail = 0;
-        body[0] = SnakeBody(startX, startY);
+        body[0] = SnakeBody(startX, startY); // initialize snake head
         snakeScore = 0;
     }
 
-    void setScore(int newScore) { snakeScore = newScore; }
-    int getScore() const { return snakeScore; }
-    void addScore(int points) { snakeScore += points; }
+    void setScore(int newScore) { snakeScore = newScore; } // set score
+    int getScore() const { return snakeScore; } // get score
+    void addScore(int points) { snakeScore += points; } // add to score
 
-    void move() {
+    void move() { // update snake body positions
         for (int i = ntail; i > 0; i--) {
             body[i] = body[i - 1];
         }
@@ -326,36 +327,36 @@ public:
         ntail = max(0, ntail - count);
     }
 
-    int getHeadX() const { return body[0].getX(); }
-    int getHeadY() const { return body[0].getY(); }
-    int getNTail() const { return ntail; }
-    void setNTail(int newTailSize) { ntail = newTailSize; }
+    int getHeadX() const { return body[0].getX(); } // get head x
+    int getHeadY() const { return body[0].getY(); } // get head y
+    int getNTail() const { return ntail; } // get tail length
+    void setNTail(int newTailSize) { ntail = newTailSize; } // set tail length
 
-    eDirection getDirection() const { return direction; }
-    void setDirection(eDirection newDir) { direction = newDir; }
+    eDirection getDirection() const { return direction; } // get direction
+    void setDirection(eDirection newDir) { direction = newDir; } // set direction
 
-    const SnakeBody& getBodyPart(int index) const {
+    const SnakeBody& getBodyPart(int index) const { // access a body part
         return body[index];
     }
 };
 
-Snake* snake = nullptr;
-Food* foods[MAX_MULTIPLE_FOODS] = { nullptr };
-int activeFoodCount = 0;
-Snake* snake2 = nullptr;
+Snake* snake = nullptr; // pointer to player 1 snake
+Food* foods[MAX_MULTIPLE_FOODS] = { nullptr }; // active food list
+int activeFoodCount = 0; // number of food items on board
+Snake* snake2 = nullptr; // pointer to player 2 snake (if active)
 
-enum eControlMode { PLAYER1 = 0, PLAYER2 };
-eDirection dir2;
-eControlMode activePlayer;
-bool twoPlayerMode = false;
+enum eControlMode { PLAYER1 = 0, PLAYER2 }; // control scheme enum
+eDirection dir2; // direction for second player
+eControlMode activePlayer; // who is currently playing
+bool twoPlayerMode = false; // toggle for multiplayer
 
 // All available food types to choose from when generating random food
-Food* foodTemplates[5] = { nullptr };
-
+Food* foodTemplates[5] = { nullptr }; // food template pool
 
 void setup() {
-    SetConsoleOutputCP(437);
+    SetConsoleOutputCP(437); // set console output for special characters
 
+    // initialize game state variables
     gameover = false;
     score = 0;
     dir = STOP;
@@ -365,6 +366,7 @@ void setup() {
     currentFoodCount = MIN_FOODS;
     shrinkFoodCount = 0;
 
+    // display game mode options
     cout << "Snake Game with Double-Line Borders" << endl;
     cout << "Select game mode:" << endl;
     cout << "1. Classic mode (regular food only)" << endl;
@@ -372,9 +374,10 @@ void setup() {
     cout << "3. Two Player mode" << endl;
     cin >> gameMode;
 
-    twoPlayerMode = (gameMode == 3);
+    twoPlayerMode = (gameMode == 3); // enable 2-player mode if chosen
 
     if (twoPlayerMode) {
+        // ask for type of two-player mode
         cout << "Select Two Player type:" << endl;
         cout << "1. Classic (regular food only)" << endl;
         cout << "2. Multiple food types (excluding score multiplier)" << endl;
@@ -384,25 +387,28 @@ void setup() {
         gameMode = (twoPlayerType == 1) ? 1 : 2;
     }
 
+    // ask for difficulty level
     cout << "Select difficulty:" << endl;
     cout << "1. Hard (faster)" << endl;
     cout << "2. Easy (slower)" << endl;
     cin >> difficultyMode;
 
-    baseGameSpeed = (difficultyMode == 1) ? 60 : 200;
+    baseGameSpeed = (difficultyMode == 1) ? 60 : 200; // set base speed
     currentGameSpeed = baseGameSpeed;
 
+    // initialize player 1 snake
     snake = new Snake(width / 3, height / 2);
 
     if (twoPlayerMode) {
+        // initialize player 2 snake
         snake2 = new Snake(2 * width / 3, height / 2);
-        snake2->setScore(0); 
-        activePlayer = PLAYER1; 
+        snake2->setScore(0);
+        activePlayer = PLAYER1;
     }
 
-    srand(static_cast<unsigned>(time(0)));
+    srand(static_cast<unsigned>(time(0))); // seed random number generator
 
-    // Initialize food templates
+    // Initialize food templates (pool of possible food types)
     foodTemplates[0] = new RegularFood();
     foodTemplates[1] = new SpeedUpFood();
     foodTemplates[2] = new SlowDownFood();
@@ -411,22 +417,24 @@ void setup() {
         foodTemplates[4] = new ScoreMultiplierFood();
     }
 
-    // Initialize minimum number of food items
+    // Initialize the starting food items
     activeFoodCount = MIN_FOODS;
 
     if (gameMode == 1) {
+        // classic mode: only regular food
         for (int i = 0; i < MIN_FOODS; i++) {
             foods[i] = new RegularFood(rand() % width, rand() % height);
         }
     }
     else {
+        // multiple food types mode
         for (int i = 0; i < MIN_FOODS; i++) {
-            int maxFoodTypes = (twoPlayerMode) ? 4 : 5;  // Exclude multiplier food in two player mode
+            int maxFoodTypes = (twoPlayerMode) ? 4 : 5;  // Exclude multiplier food in 2P mode
             int randomFoodType = rand() % maxFoodTypes;
             foods[i] = foodTemplates[randomFoodType]->clone();
 
             if (randomFoodType == 3) {
-                shrinkFoodCount++;
+                shrinkFoodCount++; // track how many shrink foods on screen
             }
 
             foods[i]->setPosition(rand() % width, rand() % height);
@@ -436,9 +444,10 @@ void setup() {
     // Initialize the food generation timer
     lastFoodGenerationTime = clock();
 
-    // Clear screen before game start
+    // Clear screen before game starts
     system("cls");
 
+    // display controls
     if (twoPlayerMode) {
         cout << "Player 1: Use WASD keys to move" << endl;
         cout << "Player 2: Use Arrow keys to move" << endl;
@@ -448,6 +457,7 @@ void setup() {
     }
     cout << "Press X to quit the game." << endl;
 
+    // food legend and behavior in multi-food mode
     if (gameMode == 2) {
         cout << "Food types:" << endl;
         cout << "() - Regular food (adds tail segment)" << endl;
@@ -463,11 +473,13 @@ void setup() {
         cout << "Food will gradually spawn over time (every 7 seconds)" << endl;
     }
 
+    // wait for user to press a key
     cout << "Press any key to start...";
     _getch();
     system("cls");
 }
 
+// Function to handle keyboard input
 void input() {
     if (_kbhit()) {
         char key = _getch();
@@ -531,7 +543,7 @@ void input() {
                 break;
             case 'x':
             case 'X':
-                gameover = true;
+                gameover = true; // quit game
                 break;
             }
         }
@@ -572,13 +584,14 @@ void input() {
                 break;
             case 'x':
             case 'X':
-                gameover = true;
+                gameover = true; // quit game
                 break;
             }
         }
     }
 }
 
+// Check if a position is occupied by any part of either snake
 bool isPositionOnSnake(int x, int y) {
     if (x == snake->getHeadX() && y == snake->getHeadY()) {
         return true;
@@ -605,6 +618,7 @@ bool isPositionOnSnake(int x, int y) {
     return false;
 }
 
+// Check if a position is already occupied by another food (not the one at given index)
 bool isPositionOnOtherFood(int index, int x, int y) {
     for (int i = 0; i < activeFoodCount; i++) {
         if (i != index && foods[i] != nullptr) {
@@ -617,6 +631,7 @@ bool isPositionOnOtherFood(int index, int x, int y) {
     return false;
 }
 
+// Respawn a food item at a new random position and possibly change its type
 void respawnFood(int index) {
     bool validPosition = false;
     int newX, newY;
@@ -639,7 +654,7 @@ void respawnFood(int index) {
         if (shrinkFoodCount >= MAX_SHRINK_FOOD) {
             do {
                 randomFoodType = rand() % 5;
-            } while (randomFoodType == 3);
+            } while (randomFoodType == 3); // skip shrink food
         }
         else {
             randomFoodType = rand() % 5;
@@ -649,14 +664,14 @@ void respawnFood(int index) {
             shrinkFoodCount++;
         }
 
-        delete foods[index];
-
-        foods[index] = foodTemplates[randomFoodType]->clone();
+        delete foods[index]; // delete old food
+        foods[index] = foodTemplates[randomFoodType]->clone(); // assign new food type
     }
 
-    foods[index]->setPosition(newX, newY);
+    foods[index]->setPosition(newX, newY); // set new position
 }
 
+// Add a new food item to the board if there's room
 void generateNewFood() {
     if (activeFoodCount >= MAX_MULTIPLE_FOODS) {
         return;
@@ -674,7 +689,7 @@ void generateNewFood() {
         if (shrinkFoodCount >= MAX_SHRINK_FOOD) {
             do {
                 randomFoodType = rand() % 5;
-            } while (randomFoodType == 3);
+            } while (randomFoodType == 3); // avoid too many shrink foods
         }
         else {
             randomFoodType = rand() % 5;
@@ -687,6 +702,7 @@ void generateNewFood() {
         foods[newIndex] = foodTemplates[randomFoodType]->clone();
     }
 
+    // find a valid spawn position
     bool validPosition = false;
     int newX, newY;
 
@@ -700,6 +716,7 @@ void generateNewFood() {
     foods[newIndex]->setPosition(newX, newY);
 }
 
+// Handle expiring effects and generate new food on timer
 void updateEffects() {
     if (speedEffectActive && speedEffectTimer.isExpired()) {
         currentGameSpeed = baseGameSpeed;
@@ -715,12 +732,11 @@ void updateEffects() {
 
     if (elapsedMs >= FOOD_GENERATION_INTERVAL) {
         if (activeFoodCount < MAX_MULTIPLE_FOODS) {
-            generateNewFood(); 
+            generateNewFood();
         }
         lastFoodGenerationTime = currentTime;
     }
 }
-
 void logic() {
     updateEffects();
 
