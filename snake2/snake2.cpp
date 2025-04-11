@@ -9,21 +9,27 @@
 #include <cmath>
 #include<windows.h>
 #include<conio.h> // for keyboard inputs
+
+// libraries imported for sound
 #include <mmsystem.h>
 #pragma comment(lib, "winmm.lib")
+
 using namespace std;
 
+// size of the game board differs because of different sizes in x and y characters
 const int height = 20;
 const int width = 30;
-bool gameover;
-int score;
-int baseGameSpeed;
-int currentGameSpeed;
-int difficultyMode;
-int gameMode;
+
 const int MAX_MULTIPLE_FOODS = 12;
 const int MIN_FOODS = 2;
 const int EFFECT_DURATION = 3000;
+bool gameover; // game over flag
+int score; // counter variable for player score
+int baseGameSpeed; // base speed of the game
+int currentGameSpeed;
+int difficultyMode;
+int gameMode;
+
 bool speedEffectActive = false;
 bool scoreMultiplierActive = false;
 int scoreMultiplier = 1;
@@ -37,15 +43,16 @@ const int MAX_SHRINK_FOOD = 2;
 enum eDirection { STOP = 0, UP, DOWN, LEFT, RIGHT };
 eDirection dir;
 
+// Snake body class to store the position of each segment (differs from the snake head)
 class SnakeBody {
 private:
-    int x, y;
-    int prevX, prevY;
+    int x, y; // current position of the snake body in x and y coordinates with respect to the game board
+    int prevX, prevY; // previous position of the snake body in x and y coordinates
 
 public:
     SnakeBody(int x = 0, int y = 0) : x(x), y(y), prevX(x), prevY(y) {}
 
-    void updatePosition(int newX, int newY) {
+    void updatePosition(int newX, int newY) { // update the position of the snake body
         prevX = x;
         prevY = y;
         x = newX;
@@ -108,7 +115,8 @@ public:
 EffectTimer speedEffectTimer;
 EffectTimer scoreMultiplierTimer;
 
-class Food {
+// Food class to store the position of the food in x and y coordinates with respect to the game board
+class Food { 
 protected:
     int x, y;
     char leftSymbol, rightSymbol;
@@ -144,6 +152,7 @@ public:
     virtual Food* clone() const = 0; // For creating new food objects dynamically
 };
 
+// Different types of food classes inheriting from the Food class
 class RegularFood : public Food {
 public:
     RegularFood(int x = 0, int y = 0) : Food(x, y) {
@@ -244,6 +253,8 @@ public:
     }
 };
 
+// Snake class to store the position of the snake in x and y coordinates with respect to the game board
+// This is where the snake moves
 class Snake {
 private:
     SnakeBody body[100];
@@ -271,6 +282,7 @@ public:
         int headX = body[0].getX();
         int headY = body[0].getY();
 
+        // switch statement to determine the direction of the snake
         switch (direction) {
         case UP:
             body[0].updatePosition(headX, headY - 1);
@@ -289,7 +301,7 @@ public:
         }
     }
 
-    bool checkCollision() {
+    bool checkCollision() { // check if the snake collides with itself or the walls
         int headX = body[0].getX();
         int headY = body[0].getY();
 
@@ -306,11 +318,11 @@ public:
         return false;
     }
 
-    void eatFood() {
+    void eatFood() { // add a segment to the snake when it eats food
         ntail++;
     }
 
-    void removeTail(int count) {
+    void removeTail(int count) { // remove a segment from the snake when it eats shrink food
         ntail = max(0, ntail - count);
     }
 
@@ -339,6 +351,7 @@ bool twoPlayerMode = false;
 
 // All available food types to choose from when generating random food
 Food* foodTemplates[5] = { nullptr };
+
 
 void setup() {
     SetConsoleOutputCP(437);
